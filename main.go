@@ -70,7 +70,8 @@ func WeatherPost(response http.ResponseWriter, request *http.Request) {
 
 	// Search JSON
 	local := jsonParsed.Path("name").String()
-	fmt.Println("Get value of Local:\t", local)
+
+	fmt.Println("Get value of Local:\t", local[1 : len(local)-1])
 	fmt.Println("Get value of temp:\t", jsonParsed.Path("main.temp").String())
 	fmt.Println("Get value of temp_min:\t", jsonParsed.Path("main.temp_min").String())
 	fmt.Println("Get value of temp_max:\t", jsonParsed.Path("main.temp_max").String())
@@ -80,9 +81,8 @@ func WeatherPost(response http.ResponseWriter, request *http.Request) {
 	fmt.Println("Get value of desc:\t", jsonParsed.Path("weather.0.main").String())
 
 	var openWeather OpenWeather
-	openWeather.Local = local
-	openWeather.Json = string(bodyBytes)
-	_ = json.NewDecoder(resp.Body).Decode(&openWeather)
+	openWeather.Local = local[1 : len(local)-1]
+	openWeather.Json = string(bodyBytes) _ = json.NewDecoder(resp.Body).Decode(&openWeather)
 
 	collection := client.Database("OpenWeather").Collection("OpenWeather")
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
@@ -119,7 +119,7 @@ func WeatherGet(response http.ResponseWriter, request *http.Request) {
 		temp, err := strconv.ParseFloat(jsonParsed.Path("main.temp").String(), 32)
 		temp_min, err := strconv.ParseFloat(jsonParsed.Path("main.temp_min").String(), 32)
 		temp_max, err := strconv.ParseFloat(jsonParsed.Path("main.temp_max").String(), 32)
-		temp_like, err := strconv.ParseFloat(jsonParsed.Path("main.temp_like").String(), 32)
+		temp_like, err := strconv.ParseFloat(jsonParsed.Path("main.feels_like").String(), 32)
 		press, err := strconv.ParseFloat(jsonParsed.Path("main.pressure").String(), 32)
 		hum, err := strconv.ParseFloat(jsonParsed.Path("main.humidity").String(), 32)
 		med_temp = med_temp + temp
@@ -132,6 +132,7 @@ func WeatherGet(response http.ResponseWriter, request *http.Request) {
 		openWeathers = append(openWeathers, openWeather)
 	}
 	if err := cursor.Err(); err != nil {
+
 		response.WriteHeader(http.StatusInternalServerError)
 		response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
 		return
