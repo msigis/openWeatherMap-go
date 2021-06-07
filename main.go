@@ -30,7 +30,12 @@ type OpenWeather struct {
 	Json  string             `json:"json,omitempty" bson:"json,omitempty"`
 }
 type ResponseApi struct {
-	Temp_med float64 `json:"temp_med"`
+	Temp_med      float64 `json:"temp_med"`
+	Temp_min_med  float64 `json:"temp_min_med"`
+	Temp_max_med  float64 `json:"temp_max_med"`
+	Temp_like_med float64 `json:"temp_like_med"`
+	Press_med     float64 `json:"press_med"`
+	Hum_med       float64 `json:"hum_med"`
 }
 
 func WeatherPost(response http.ResponseWriter, request *http.Request) {
@@ -67,6 +72,11 @@ func WeatherPost(response http.ResponseWriter, request *http.Request) {
 	local := jsonParsed.Path("name").String()
 	fmt.Println("Get value of Local:\t", local)
 	fmt.Println("Get value of temp:\t", jsonParsed.Path("main.temp").String())
+	fmt.Println("Get value of temp_min:\t", jsonParsed.Path("main.temp_min").String())
+	fmt.Println("Get value of temp_max:\t", jsonParsed.Path("main.temp_max").String())
+	fmt.Println("Get value of temp_like:\t", jsonParsed.Path("main.feels_like").String())
+	fmt.Println("Get value of pres:\t", jsonParsed.Path("main.pressure").String())
+	fmt.Println("Get value of hum:\t", jsonParsed.Path("main.humidity").String())
 	fmt.Println("Get value of desc:\t", jsonParsed.Path("weather.0.main").String())
 
 	var openWeather OpenWeather
@@ -82,6 +92,7 @@ func WeatherPost(response http.ResponseWriter, request *http.Request) {
 
 func WeatherGet(response http.ResponseWriter, request *http.Request) {
 	response.Header().Set("content-type", "application/json")
+
 	var openWeathers []OpenWeather
 	collection := client.Database("OpenWeather").Collection("OpenWeather")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
@@ -93,6 +104,11 @@ func WeatherGet(response http.ResponseWriter, request *http.Request) {
 	}
 	defer cursor.Close(ctx)
 	var med_temp float64
+	var med_temp_min float64
+	var med_temp_max float64
+	var med_temp_like float64
+	var med_press float64
+	var med_hum float64
 	for cursor.Next(ctx) {
 		var openWeather OpenWeather
 		cursor.Decode(&openWeather)
@@ -101,7 +117,17 @@ func WeatherGet(response http.ResponseWriter, request *http.Request) {
 			panic(err)
 		}
 		temp, err := strconv.ParseFloat(jsonParsed.Path("main.temp").String(), 32)
+		temp_min, err := strconv.ParseFloat(jsonParsed.Path("main.temp_min").String(), 32)
+		temp_max, err := strconv.ParseFloat(jsonParsed.Path("main.temp_max").String(), 32)
+		temp_like, err := strconv.ParseFloat(jsonParsed.Path("main.temp_like").String(), 32)
+		press, err := strconv.ParseFloat(jsonParsed.Path("main.pressure").String(), 32)
+		hum, err := strconv.ParseFloat(jsonParsed.Path("main.humidity").String(), 32)
 		med_temp = med_temp + temp
+		med_temp_min = med_temp_min + temp_min
+		med_temp_max = med_temp_max + temp_max
+		med_temp_like = med_temp_like + temp_like
+		med_press = med_press + press
+		med_hum = med_hum + hum
 
 		openWeathers = append(openWeathers, openWeather)
 	}
@@ -113,6 +139,11 @@ func WeatherGet(response http.ResponseWriter, request *http.Request) {
 	countDocuments, _ := collection.CountDocuments(ctx, bson.M{})
 	var responseApi ResponseApi
 	responseApi.Temp_med = math.Round((med_temp/float64(countDocuments)-273.15)*100) / 100
+	responseApi.Temp_min_med = math.Round((med_temp_min/float64(countDocuments)-273.15)*100) / 100
+	responseApi.Temp_max_med = math.Round((med_temp_max/float64(countDocuments)-273.15)*100) / 100
+	responseApi.Temp_like_med = math.Round((med_temp_like/float64(countDocuments)-273.15)*100) / 100
+	responseApi.Press_med = math.Round((med_press/float64(countDocuments))*100) / 100
+	responseApi.Hum_med = math.Round((med_hum/float64(countDocuments))*100) / 100
 	fmt.Printf("%.2f", responseApi.Temp_med)
 	json.NewEncoder(response).Encode(responseApi)
 }
@@ -121,6 +152,7 @@ func main() {
 	fmt.Println("Starting the application on port 8080")
 	ConnectMongo()
 	go callPost()
+
 	router := mux.NewRouter()
 	router.HandleFunc("/weather", WeatherPost).Methods("POST")
 	router.HandleFunc("/weather", WeatherGet).Methods("GET")
@@ -154,8 +186,8 @@ func callPost() {
 func ConnectMongo() {
 
 	var (
-		//		mongoURL = "mongodb://localhost:27017"
-		mongoURL = "mongodb://localhost:27017"
+		mongoURL = "mongodb://mongodb-openweather-go:27017"
+		//mongoURL = "mongodb://localhost:27017"
 	)
 	var err error
 	// Initialize a new mongo client with options

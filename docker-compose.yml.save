@@ -1,0 +1,17 @@
+version: "3"
+
+services:
+  web:
+    build: .
+    ports:
+      - 8080:8080
+
+  mongodb:
+    image: bitnami/mongodb:latest
+    ports:
+      - 27017:27017
+    volumes:
+      - mongodb-data-openweather:/bitnami/mongodb-okteto stack deploy --build
+
+volumes:
+  mongodb-data-openweather:

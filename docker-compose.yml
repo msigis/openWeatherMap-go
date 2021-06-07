@@ -1,0 +1,16 @@
+version: "3"
+
+services:
+  api2:
+    build: .
+    ports:
+      - 8080:8080
+
+  mongodb-openweather-go:
+    image: bitnami/mongodb:latest
+    ports:
+      - 27017:27017
+    volumes:
+      - mongodb-data-openweather-go:/bitnami/mongodb
+volumes:
+  mongodb-data-openweather-go:
