@@ -71,7 +71,7 @@ func WeatherPost(response http.ResponseWriter, request *http.Request) {
 	// Search JSON
 	local := jsonParsed.Path("name").String()
 
-	fmt.Println("Get value of Local:\t", local[1 : len(local)-1])
+	fmt.Println("Get value of Local:\t", local[1:len(local)-1])
 	fmt.Println("Get value of temp:\t", jsonParsed.Path("main.temp").String())
 	fmt.Println("Get value of temp_min:\t", jsonParsed.Path("main.temp_min").String())
 	fmt.Println("Get value of temp_max:\t", jsonParsed.Path("main.temp_max").String())
@@ -82,7 +82,8 @@ func WeatherPost(response http.ResponseWriter, request *http.Request) {
 
 	var openWeather OpenWeather
 	openWeather.Local = local[1 : len(local)-1]
-	openWeather.Json = string(bodyBytes) _ = json.NewDecoder(resp.Body).Decode(&openWeather)
+	openWeather.Json = string(bodyBytes)
+	_ = json.NewDecoder(resp.Body).Decode(&openWeather)
 
 	collection := client.Database("OpenWeather").Collection("OpenWeather")
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
