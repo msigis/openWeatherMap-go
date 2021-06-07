@@ -29,7 +29,7 @@ type OpenWeather struct {
 	ID    primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	Local string             `json:"local,omitempty" bson:"local,omitempty"`
 	Json  string             `json:"json,omitempty" bson:"json,omitempty"`
-	dt    int                `json:"dt,omitempty" bson:"dt,omitempty"`
+	Dt    int64              `json:"dt,omitempty" bson:"dt,omitempty"`
 }
 type ResponseApi struct {
 	Temp_med      float64 `json:"temp_med"`
@@ -72,8 +72,9 @@ func WeatherPost(response http.ResponseWriter, request *http.Request) {
 
 	// Search JSON
 	local := jsonParsed.Path("name").String()
-
+	dt, err := strconv.ParseInt(jsonParsed.Path("dt").String(), 32, 32)
 	fmt.Println("Get value of Local:\t", local[1:len(local)-1])
+	fmt.Println("Get value of Data:\t", time.Unix(dt, 0))
 	fmt.Println("Get value of temp:\t", jsonParsed.Path("main.temp").String())
 	fmt.Println("Get value of temp_min:\t", jsonParsed.Path("main.temp_min").String())
 	fmt.Println("Get value of temp_max:\t", jsonParsed.Path("main.temp_max").String())
@@ -85,7 +86,7 @@ func WeatherPost(response http.ResponseWriter, request *http.Request) {
 	var openWeather OpenWeather
 	openWeather.Local = local[1 : len(local)-1]
 	openWeather.Json = strings.Replace(string(bodyBytes), "\\", "", -1)
-	openWeather.dt, err = strconv.Atoi(jsonParsed.Path("dt").String())
+	openWeather.Dt = dt
 	_ = json.NewDecoder(resp.Body).Decode(&openWeather)
 
 	collection := client.Database("OpenWeather").Collection("OpenWeather")
