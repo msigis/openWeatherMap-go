@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Jeffail/gabs/v2"
@@ -28,6 +29,7 @@ type OpenWeather struct {
 	ID    primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	Local string             `json:"local,omitempty" bson:"local,omitempty"`
 	Json  string             `json:"json,omitempty" bson:"json,omitempty"`
+	dt    int                `json:"dt,omitempty" bson:"dt,omitempty"`
 }
 type ResponseApi struct {
 	Temp_med      float64 `json:"temp_med"`
@@ -82,7 +84,8 @@ func WeatherPost(response http.ResponseWriter, request *http.Request) {
 
 	var openWeather OpenWeather
 	openWeather.Local = local[1 : len(local)-1]
-	openWeather.Json = string(bodyBytes)
+	openWeather.Json = strings.Replace(string(bodyBytes), "\\", "", -1)
+	openWeather.dt, err = strconv.Atoi(jsonParsed.Path("dt").String())
 	_ = json.NewDecoder(resp.Body).Decode(&openWeather)
 
 	collection := client.Database("OpenWeather").Collection("OpenWeather")
