@@ -29,7 +29,7 @@ type OpenWeather struct {
 	ID    primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	Local string             `json:"local,omitempty" bson:"local,omitempty"`
 	Json  string             `json:"json,omitempty" bson:"json,omitempty"`
-	Date  time.Time          `json:"dt,omitempty" bson:"dt,omitempty"`
+	Date  time.Time          `json:"date,omitempty" bson:"date,omitempty"`
 }
 type ResponseApi struct {
 	Temp_med      float64 `json:"temp_med"`
