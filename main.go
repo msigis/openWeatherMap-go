@@ -99,10 +99,29 @@ func WeatherPost(response http.ResponseWriter, request *http.Request) {
 func WeatherGet(response http.ResponseWriter, request *http.Request) {
 	response.Header().Set("content-type", "application/json")
 
+	daylast := request.URL.Query().Get("daylast")
+	//daylast := request.FormValue("daylast")
+	fmt.Println("Get value of last day:\t", daylast)
+
 	var openWeathers []OpenWeather
 	collection := client.Database("OpenWeather").Collection("OpenWeather")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	cursor, err := collection.Find(ctx, bson.M{})
+
+	findOptions := options.Find()
+	findOptions.SetSort(bson.D{{Key: "date", Value: -1}})
+
+	day, _ := strconv.Atoi(daylast)
+	//fromDate := primitive.NewDateTimeFromTime(time.Now().AddDate(0, 0, -day))
+	fromDate := primitive.NewDateTimeFromTime(time.Now().Add(-24 * time.Duration(day) * time.Hour))
+	fmt.Println("Get value of last day:\t", fromDate.Time().UTC().Format(time.ANSIC))
+
+	filter := bson.D{
+		{Key: "date", Value: bson.D{
+			{Key: "$gte", Value: fromDate},
+		}},
+	}
+	cursor, err := collection.Find(ctx, filter, findOptions)
+	//cursor, err := collection.Find(ctx, bson.M{})
 	if err != nil {
 		response.WriteHeader(http.StatusInternalServerError)
 		response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
@@ -143,7 +162,10 @@ func WeatherGet(response http.ResponseWriter, request *http.Request) {
 		response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
 		return
 	}
-	countDocuments, _ := collection.CountDocuments(ctx, bson.M{})
+	//countDocuments, _ := collection.CountDocuments(ctx, bson.M{})
+	countDocuments, _ := collection.CountDocuments(ctx, filter)
+	fmt.Printf("countDocuments: %v\n", countDocuments)
+
 	var responseApi ResponseApi
 	responseApi.Temp_med = math.Round((med_temp/float64(countDocuments)-273.15)*100) / 100
 	responseApi.Temp_min_med = math.Round((med_temp_min/float64(countDocuments)-273.15)*100) / 100
