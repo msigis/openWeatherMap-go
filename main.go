@@ -99,9 +99,13 @@ func WeatherPost(response http.ResponseWriter, request *http.Request) {
 func WeatherGet(response http.ResponseWriter, request *http.Request) {
 	response.Header().Set("content-type", "application/json")
 
-	daylast := request.URL.Query().Get("daylast")
-	//daylast := request.FormValue("daylast")
-	fmt.Println("Get value of last day:\t", daylast)
+	//get query params
+
+	fromday := request.URL.Query().Get("fromday")
+	//today := request.URL.Query().Get("today")
+	today := request.FormValue("today")
+	fmt.Println("Get query params  from  day:\t", fromday)
+	fmt.Println("Get query params  to  day:\t", today)
 
 	var openWeathers []OpenWeather
 	collection := client.Database("OpenWeather").Collection("OpenWeather")
@@ -110,14 +114,18 @@ func WeatherGet(response http.ResponseWriter, request *http.Request) {
 	findOptions := options.Find()
 	findOptions.SetSort(bson.D{{Key: "date", Value: -1}})
 
-	day, _ := strconv.Atoi(daylast)
+	dayfrom, _ := strconv.Atoi(fromday)
+	dayto, _ := strconv.Atoi(today)
 	//fromDate := primitive.NewDateTimeFromTime(time.Now().AddDate(0, 0, -day))
-	fromDate := primitive.NewDateTimeFromTime(time.Now().Add(-24 * time.Duration(day) * time.Hour))
-	fmt.Println("Get value of last day:\t", fromDate.Time().UTC().Format(time.ANSIC))
+	fromDate := primitive.NewDateTimeFromTime(time.Now().Add(-24 * time.Duration(dayfrom) * time.Hour))
+	toDate := primitive.NewDateTimeFromTime(time.Now().Add(-24 * time.Duration(dayto) * time.Hour))
+	fmt.Println("Query from day:\t", fromDate.Time().UTC().Format(time.ANSIC))
+	fmt.Println("Query to day:\t", toDate.Time().UTC().Format(time.ANSIC))
 
 	filter := bson.D{
 		{Key: "date", Value: bson.D{
 			{Key: "$gte", Value: fromDate},
+			{Key: "$lte", Value: toDate},
 		}},
 	}
 	cursor, err := collection.Find(ctx, filter, findOptions)
