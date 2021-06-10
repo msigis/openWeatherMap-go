@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -42,9 +43,23 @@ type ResponseApi struct {
 	Hum_med       float64 `json:"hum_med"`
 }
 
+type RequestApi struct {
+	Local string
+}
+
+var Local string
+
 func WeatherPost(response http.ResponseWriter, request *http.Request) {
 	response.Header().Set("content-type", "application/json")
-	resp, err := http.Get("http://api.openweathermap.org//data/2.5/weather?id=3166076&appid=4fd482904a9d92d2acb0e7d428e83ef6")
+	decoder := json.NewDecoder(request.Body)
+	var requestApi RequestApi
+	err := decoder.Decode(&requestApi)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Get Body value of Local:\t", requestApi.Local)
+
+	resp, err := http.Get("http://api.openweathermap.org//data/2.5/weather?q= " + requestApi.Local + "&appid=4fd482904a9d92d2acb0e7d428e83ef6")
 	if err != nil {
 		panic(err)
 	}
@@ -95,7 +110,18 @@ func WeatherPost(response http.ResponseWriter, request *http.Request) {
 	result, _ := collection.InsertOne(ctx, openWeather)
 	json.NewEncoder(response).Encode(result)
 }
+func WeatherPut(response http.ResponseWriter, request *http.Request) {
+	response.Header().Set("content-type", "application/json")
+	decoder := json.NewDecoder(request.Body)
+	var requestApi RequestApi
+	err := decoder.Decode(&requestApi)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Get Body value of Local:\t", requestApi.Local)
+	go callPost(requestApi.Local)
 
+}
 func WeatherGet(response http.ResponseWriter, request *http.Request) {
 	response.Header().Set("content-type", "application/json")
 
@@ -104,8 +130,10 @@ func WeatherGet(response http.ResponseWriter, request *http.Request) {
 	fromday := request.URL.Query().Get("fromday")
 	//today := request.URL.Query().Get("today")
 	today := request.FormValue("today")
+	local := request.FormValue("local")
 	fmt.Println("Get query params  from  day:\t", fromday)
 	fmt.Println("Get query params  to  day:\t", today)
+	fmt.Println("Get query params  local:\t", local)
 
 	var openWeathers []OpenWeather
 	collection := client.Database("OpenWeather").Collection("OpenWeather")
@@ -126,6 +154,9 @@ func WeatherGet(response http.ResponseWriter, request *http.Request) {
 		{Key: "date", Value: bson.D{
 			{Key: "$gte", Value: fromDate},
 			{Key: "$lte", Value: toDate},
+		}},
+		{Key: "local", Value: bson.D{
+			{Key: "$eq", Value: local},
 		}},
 	}
 	cursor, err := collection.Find(ctx, filter, findOptions)
@@ -186,28 +217,30 @@ func WeatherGet(response http.ResponseWriter, request *http.Request) {
 }
 
 func main() {
+	Local = "Strozza"
 	fmt.Println("Starting the application on port 8080")
 	ConnectMongo()
-	go callPost()
 
 	router := mux.NewRouter()
 	router.HandleFunc("/weather", WeatherPost).Methods("POST")
+	router.HandleFunc("/weather", WeatherPut).Methods("PUT")
 	router.HandleFunc("/weather", WeatherGet).Methods("GET")
 	log.Fatal(http.ListenAndServe(":8080", router))
 
 }
-func callPost() {
+func callPost(local string) {
 	ticker := time.NewTicker(10 * time.Minute)
 	//done := make(chan bool)
+	var jsonData = []byte(`{"local": "` + local + `"}`)
 
 	go func() {
 		for {
 			select {
 			//case <-done:
-			//	return
+			//		return
 			case t := <-ticker.C:
 				fmt.Println("Tick at", t)
-				req, _ := http.NewRequest("POST", "/weather", nil)
+				req, _ := http.NewRequest("POST", "/weather", bytes.NewBuffer(jsonData))
 				rr := httptest.NewRecorder()
 				WeatherPost(rr, req)
 			}
