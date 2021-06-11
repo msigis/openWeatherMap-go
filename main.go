@@ -48,6 +48,7 @@ type RequestApi struct {
 }
 
 var Local string
+var done (map[string](chan bool))
 
 func WeatherPost(response http.ResponseWriter, request *http.Request) {
 	response.Header().Set("content-type", "application/json")
@@ -119,7 +120,9 @@ func WeatherPut(response http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 	fmt.Println("Get Body value of Local:\t", requestApi.Local)
-	go callPost(requestApi.Local)
+	action := request.URL.Query().Get("action")
+	fmt.Println("Get query params  from  action:\t", action)
+	go callPost(requestApi.Local, action)
 
 }
 func WeatherGet(response http.ResponseWriter, request *http.Request) {
@@ -220,7 +223,7 @@ func main() {
 	Local = "Strozza"
 	fmt.Println("Starting the application on port 8080")
 	ConnectMongo()
-
+	done = make(map[string](chan bool))
 	router := mux.NewRouter()
 	router.HandleFunc("/weather", WeatherPost).Methods("POST")
 	router.HandleFunc("/weather", WeatherPut).Methods("PUT")
@@ -228,7 +231,23 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", router))
 
 }
-func callPost(local string) {
+
+func callPost(local string, action string) {
+	var jsonData = []byte(`{"local": "` + local + `"}`)
+	if action == "start" {
+
+		done[local] = startTicker(func() {
+			req, _ := http.NewRequest("POST", "/weather", bytes.NewBuffer(jsonData))
+			rr := httptest.NewRecorder()
+			WeatherPost(rr, req)
+		})
+		fmt.Println("Start  :", local, "  ", done)
+	} else {
+		close(done[local])
+	}
+}
+
+/*func callPost(local string) {
 	ticker := time.NewTicker(10 * time.Minute)
 	//done := make(chan bool)
 	var jsonData = []byte(`{"local": "` + local + `"}`)
@@ -246,11 +265,25 @@ func callPost(local string) {
 			}
 		}
 	}()
+} */
 
-	//time.Sleep(60 * time.Second)
-	//ticker.Stop()
-	//done <- true
-	//fmt.Println("Ticker stopped")
+func startTicker(f func()) chan bool {
+	done1 := make(chan bool, 1)
+	go func() {
+		ticker := time.NewTicker(time.Minute * 1)
+		fmt.Println("Tick at:", ticker.C)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				f()
+			case <-done1:
+				fmt.Println("done")
+				return
+			}
+		}
+	}()
+	return done1
 }
 
 func ConnectMongo() {
