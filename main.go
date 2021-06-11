@@ -270,7 +270,7 @@ func callPost(local string, action string) {
 func startTicker(f func()) chan bool {
 	done1 := make(chan bool, 1)
 	go func() {
-		ticker := time.NewTicker(time.Minute * 1)
+		ticker := time.NewTicker(time.Minute * 10)
 		fmt.Println("Tick at:", ticker.C)
 		defer ticker.Stop()
 		for {
