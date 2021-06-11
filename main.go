@@ -219,6 +219,20 @@ func WeatherGet(response http.ResponseWriter, request *http.Request) {
 	json.NewEncoder(response).Encode(responseApi)
 }
 
+func WeatherGetLocal(response http.ResponseWriter, request *http.Request) {
+	response.Header().Set("content-type", "application/json")
+
+	local := make([]string, len(done))
+	i := 0
+	for k, _ := range done {
+		local[i] = k
+		fmt.Println(k)
+		i++
+	}
+	//jsonString, _ := json.Marshal(local)
+	json.NewEncoder(response).Encode(local)
+}
+
 func main() {
 	Local = "Strozza"
 	fmt.Println("Starting the application on port 8080")
@@ -228,6 +242,7 @@ func main() {
 	router.HandleFunc("/weather", WeatherPost).Methods("POST")
 	router.HandleFunc("/weather", WeatherPut).Methods("PUT")
 	router.HandleFunc("/weather", WeatherGet).Methods("GET")
+	router.HandleFunc("/weather/local", WeatherGetLocal).Methods("GET")
 	log.Fatal(http.ListenAndServe(":8080", router))
 
 }
@@ -244,6 +259,7 @@ func callPost(local string, action string) {
 		fmt.Println("Start  :", local, "  ", done)
 	} else {
 		close(done[local])
+		delete(done, local)
 	}
 }
 
