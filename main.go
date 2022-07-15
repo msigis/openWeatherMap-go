@@ -306,7 +306,7 @@ func ConnectMongo() {
 
 	var (
 		mongoURL = "mongodb://mongodb-openweather-go:27017"
-		//mongoURL = "mongodb://localhost:27017"
+		// mongoURL = "mongodb://localhost:27017"
 	)
 	var err error
 	// Initialize a new mongo client with options
